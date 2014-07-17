@@ -10,6 +10,7 @@ def handle_temp(temp_msg):
     temperature = float(temp_msg.data)
     msg = Temperature()
     msg.header = Header()
+    msg.header.stamp = rospy.Time.now()
     msg.header.frame_id = "base_link"
     msg.temperature = temperature
     msg.variance = 0
