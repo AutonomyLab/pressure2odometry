@@ -18,7 +18,7 @@ class Pressure2Odometry:
     sea_level_pressure = None
     molar_mass_of_air = None
     gravitational_acceleration = 9.80665
-    boltzmann_constant = 1.3806488e-23 
+    gas_constant = 8.31432
 
     def __init__(self):
         rospy.init_node("pressure2odometry_node")
@@ -85,7 +85,7 @@ class Pressure2Odometry:
         P0 = self.sea_level_pressure
         m = self.molar_mass_of_air
         g = self.gravitational_acceleration
-        k = self.boltzmann_constant
+        k = self.gas_constant
         
         return k*T*math.log(Ph/P0)/(-m*g)
 
