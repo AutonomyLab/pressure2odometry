@@ -1,0 +1,12 @@
+<launch>
+
+    <node pkg="pressure2odometry" type="pressure2odometry" name="pressure2odometry" output="screen">
+        <remap from="/barometric_pressure" to="/android/barometric_pressure" />
+        <param name="moving_average_window_size" value="20" />
+    </node>
+
+    <node pkg="pressure2odometry" type="float32totemperature" name="float32totemperature" output="screen">
+
+    </node>
+
+</launch>
