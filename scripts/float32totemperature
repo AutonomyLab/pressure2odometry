@@ -1,0 +1,30 @@
+#! /usr/bin/env python
+
+import rospy
+from std_msgs.msg import *
+from sensor_msgs.msg import *
+
+temperature_pub = None
+
+def handle_temp(temp_msg):
+    temperature = float(temp_msg.data)
+    msg = Temperature()
+    msg.header = Header()
+    msg.header.frame_id = "base_link"
+    msg.temperature = temperature
+    msg.variance = 0
+    
+    temperature_pub.publish(msg)
+
+def main():
+    global temperature_pub
+    rospy.init_node("float32totemperature_node")
+
+    rospy.Subscriber("/imu/temperature", Float32, handle_temp)
+    temperature_pub = rospy.Publisher("/temperature", Temperature)
+
+    while not rospy.is_shutdown():
+        rospy.spin()
+
+if __name__=="__main__":
+    main()
