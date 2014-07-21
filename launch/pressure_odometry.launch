@@ -5,8 +5,4 @@
         <param name="moving_average_window_size" value="20" />
     </node>
 
-    <node pkg="pressure2odometry" type="float32totemperature" name="float32totemperature" output="screen">
-
-    </node>
-
 </launch>

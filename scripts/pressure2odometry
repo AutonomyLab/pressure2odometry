@@ -8,7 +8,7 @@ from geometry_msgs.msg import *
 import math
 
 class Pressure2Odometry:
-    temperature = 293 # Kelvin
+    temperature = 288.15 # Kelvin
     last_altitude = None
 
     altitude_buffer = []
@@ -29,21 +29,14 @@ class Pressure2Odometry:
         self.window_size = rospy.get_param("moving_average_window_length", 10)
 
         self.odometry_pub = rospy.Publisher("/pressure_odometry", Odometry)
-        rospy.Subscriber("/temperature", Temperature, self.handle_temperature)
         rospy.Subscriber("/barometric_pressure", FluidPressure, self.handle_pressure)
 
     def run(self):
         while not rospy.is_shutdown():
             rospy.spin()
 
-    def handle_temperature(self, temp_msg):
-        # assuming in celsius, conversion to Kelvin
-        self.temperature = temp_msg.temperature + 273
-
     def handle_pressure(self, pressure_msg):
-        altitude = self.compute_altitude(
-                pressure_msg.fluid_pressure, 
-                self.temperature)
+        altitude = self.compute_altitude(pressure_msg.fluid_pressure)
 
         self.altitude_buffer.append(altitude)
         if len(self.altitude_buffer) > self.window_size:
@@ -79,9 +72,9 @@ class Pressure2Odometry:
 
         self.last_altitude = avg_altitude
 
-    def compute_altitude(self, pressure, temperature):
+    def compute_altitude(self, pressure):
         Ph = pressure
-        T = temperature
+        T = self.temperature
         P0 = self.sea_level_pressure
         m = self.molar_mass_of_air
         g = self.gravitational_acceleration
