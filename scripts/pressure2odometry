@@ -20,6 +20,14 @@ class Pressure2Odometry:
     gravitational_acceleration = 9.80665
     gas_constant = 8.31432
 
+    origin_altitude = None
+    zero_origin = True
+
+    republisher = None
+
+    frame_id = "odom"
+    child_frame_id = "base_footprint"
+
     def __init__(self):
         rospy.init_node("pressure2odometry_node")
 
@@ -28,14 +36,36 @@ class Pressure2Odometry:
 
         self.window_size = rospy.get_param("moving_average_window_length", 10)
 
-        self.odometry_pub = rospy.Publisher("/pressure_odometry", Odometry)
-        rospy.Subscriber("/barometric_pressure", FluidPressure, self.handle_pressure)
+        self.zero_origin = rospy.get_param("zero_origin", True)
+
+        republish = rospy.get_param("republish", True)
+        republish_topic = rospy.get_param("republish_topic", "barometric_pressure")
+        if republish:
+            self.republisher = rospy.Publisher(republish_topic, FluidPressure, queue_size=5)
+
+        self.frame_id = rospy.get_param("frame_id", "odom")
+        self.child_frame_id = rospy.get_param("child_frame_id", "base_footprint")
+
+        self.odometry_pub = rospy.Publisher("/pressure_odometry", Odometry, queue_size=5)
+        rospy.Subscriber("/pressure", FluidPressure, self.handle_pressure)
+
+        rospy.Subscriber("/android/fix", NavSatFix, self.handle_navsat)
+        self.navsat_pub = rospy.Publisher("/navsat/fix", NavSatFix)
 
     def run(self):
         while not rospy.is_shutdown():
             rospy.spin()
 
+    def handle_navsat(self, ros_msg):
+        ros_msg.header.stamp = rospy.Time.now()
+        self.navsat_pub.publish(ros_msg)
+
     def handle_pressure(self, pressure_msg):
+        t = rospy.Time.now()
+        if self.republisher != None:
+            pressure_msg.header.stamp = t
+            self.republisher.publish(pressure_msg)
+
         altitude = self.compute_altitude(pressure_msg.fluid_pressure)
 
         self.altitude_buffer.append(altitude)
@@ -48,14 +78,27 @@ class Pressure2Odometry:
             avg_altitude += a
         avg_altitude /= len(self.altitude_buffer)
 
+        # once we've got a good average going, set the origin
+        if (self.zero_origin and 
+                self.origin_altitude == None and 
+                len(self.altitude_buffer) >= self.window_size):
+            self.origin_altitude = avg_altitude
+
+        if self.zero_origin and self.origin_altitude == None:
+            return
+
+        if self.zero_origin:
+            avg_altitude -= self.origin_altitude
+
         if self.last_altitude == None:
             self.last_altitude = avg_altitude
 
         msg = Odometry()
         
         msg.header = Header()
-        msg.header.stamp = pressure_msg.header.stamp
-        msg.header.frame_id = "base_link"
+        #msg.header.stamp = pressure_msg.header.stamp
+        msg.header.stamp = t
+        msg.header.frame_id = "odom"
         msg.child_frame_id = "base_link"
 
         msg.pose = PoseWithCovariance()
